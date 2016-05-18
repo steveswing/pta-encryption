@@ -1,4 +1,4 @@
-This code relates to this forum post: (http://communities.rightnow.com/posts/97d6f47718)
+This code relates to this forum post: http://communities.rightnow.com/posts/97d6f47718
 
 The post describes the values I initially attempted. I have changed to "simpler" values with this example to try to get something working.
 
@@ -11,7 +11,7 @@ JDK7+
 
 `mvn jetty:run` (Requires JDK 8)
 
-In the browser: (http://localhost:8080/)
+In the browser: http://localhost:8080/
 
 `curl http://localhost:8080/api/chat/pta-token`
 
@@ -34,8 +34,8 @@ You need to replace limited strength JCE policy files with their unlimited stren
 local_policy.jar
 US_export_policy.jar
 
-You can find the unlimited strength jurisdiction policy files for JDK 7 here: (http://download.oracle.com/otn-pub/java/jce/7/UnlimitedJCEPolicyJDK7.zip) 
-For JDK 8 here: (http://download.oracle.com/otn-pub/java/jce/8/jce_policy-8.zip)
+You can find the unlimited strength jurisdiction policy files for JDK 7 here: http://download.oracle.com/otn-pub/java/jce/7/UnlimitedJCEPolicyJDK7.zip 
+For JDK 8 here: http://download.oracle.com/otn-pub/java/jce/8/jce_policy-8.zip
 
 ### Current RightNow Settings
 
