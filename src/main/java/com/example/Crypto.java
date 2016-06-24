@@ -1,6 +1,7 @@
 package com.example;
 
-import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -21,7 +22,7 @@ import org.slf4j.LoggerFactory;
     Current RightNow Settings
     PTA_ENABLED: Yes
     PTA_ENCRYPTION_KEYGEN: 3
-    PTA_ENCRYPTION_METHOD: aes128
+    PTA_ENCRYPTION_METHOD: aes256
     PTA_ENCRYPTION_PADDING: 1
     PTA_ERROR_URL: http://localhost:8080/error_code/%error_code%/error/%error%
     PTA_EXTERNAL_LOGIN_URL:
@@ -38,9 +39,29 @@ public class Crypto {
     private static final Logger log = LoggerFactory.getLogger(Crypto.class);
     private static final String CIPHER_ALGORITHM = "AES/CBC/PKCS5Padding";
 
+    static {
+        try {
+            final Field field = Class.forName("javax.crypto.JceSecurity").getDeclaredField("isRestricted");
+            if (null != field) {
+                field.setAccessible(true);
+                if (field.getBoolean(null)) {
+                    field.set(null, false);
+                } else {
+                    log.info("JCE cryptography unrestricted.");
+                }
+            } else {
+                log.warn("Could not determine if JCE cryptography is restricted. Check logs for \"Illegal Key Length\" messages. If present deploy " +
+                        "unlimited strength policy jar files to %s/jre/lib/security/", System.getProperty("java.home"));
+            }
+        } catch (final Exception ex) {
+            log.error("Could not programmatically remove JCE cryptography restriction. Deploy unlimited strength policy jar files to " +
+                    "%s/jre/lib/security/", ex, System.getProperty("java.home"));
+        }
+    }
+
     public static String encrypt(final String plainText, final byte[] password)
             throws BadPaddingException, IllegalBlockSizeException, InvalidAlgorithmParameterException, InvalidKeyException, NoSuchAlgorithmException,
-            NoSuchPaddingException, UnsupportedEncodingException {
+            NoSuchPaddingException {
         final SecretKeySpec secret = generateSecretKey(password);
         assert null != password && 32 == password.length; // requires 256-bit key to be compatible with PTA_ENCRYPTION_KEYGEN = 3 - RSSL_KEYGEN_NONE
 
@@ -50,7 +71,7 @@ public class Crypto {
         PKCS#5 padding is identical to PKCS#7 padding, except that it has only been defined for block ciphers that use a 64-bit (8 byte) block
         size. In practice the two can be used interchangeably.
 
-        PTA_ENCRYPTION_METHOD = aes128
+        PTA_ENCRYPTION_METHOD = aes256
 
         According to this link: https://paragonie.com/blog/2015/05/if-you-re-typing-word-mcrypt-into-your-code-you-re-doing-it-wrong
 
@@ -66,7 +87,7 @@ public class Crypto {
         final Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
         cipher.init(Cipher.ENCRYPT_MODE, secret, new IvParameterSpec(
                 new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})); // PTA_ENCRYPTION_IV is - Blank : Empty IV (all zeros)
-        final byte[] cipherText = cipher.doFinal(plainText.getBytes("UTF-8"));
+        final byte[] cipherText = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
 
         // PTA_ENCRYPTION_SALT - Blank : No salt.
         final String result = encodeSpecialChars(DatatypeConverter.printBase64Binary(cipherText));
@@ -76,11 +97,11 @@ public class Crypto {
 
     public static String decrypt(final String cipherText, final byte[] password)
             throws BadPaddingException, IllegalBlockSizeException, InvalidAlgorithmParameterException, InvalidKeyException, NoSuchAlgorithmException,
-            NoSuchPaddingException, UnsupportedEncodingException {
+            NoSuchPaddingException {
         final SecretKey secretKey = generateSecretKey(password);
         final Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
         cipher.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}));
-        return new String(cipher.doFinal(DatatypeConverter.parseBase64Binary(decodeSpecialChars(cipherText))), "UTF-8");
+        return new String(cipher.doFinal(DatatypeConverter.parseBase64Binary(decodeSpecialChars(cipherText))), StandardCharsets.UTF_8);
     }
 
     private static SecretKeySpec generateSecretKey(final byte[] password) {

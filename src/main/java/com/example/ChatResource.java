@@ -1,6 +1,6 @@
 package com.example;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -24,23 +24,21 @@ import static com.example.Crypto.PTA_SECRET_KEY;
 
 @Path("chat")
 public class ChatResource {
-
     private static final Logger log = LoggerFactory.getLogger(ChatResource.class);
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @Path("pta-token")
     public Response ptaToken() {
-        final Map<String, String> result = new LinkedHashMap<>();
-        final UriBuilder uriBuilder = UriBuilder.fromPath("/");
-        uriBuilder.queryParam("p_userid", "userid");
-        uriBuilder.queryParam("p_passwd", "passwd");
-        uriBuilder.queryParam("p_name.first", "First");
-        uriBuilder.queryParam("p_name.last", "Last");
-        uriBuilder.queryParam("p_email.addr", "first.last@example.com");
-        final String encryptedPtaToken;
         try {
-            encryptedPtaToken = Crypto.encrypt(uriBuilder.build().getQuery(), PTA_SECRET_KEY.getBytes("UTF-8"));
+            final UriBuilder uriBuilder = UriBuilder.fromPath("/");
+            uriBuilder.queryParam("p_userid", "userid");
+            uriBuilder.queryParam("p_name.first", "First");
+            uriBuilder.queryParam("p_name.last", "Last");
+            uriBuilder.queryParam("p_email.addr", "first.last@example.com");
+            uriBuilder.queryParam("p_ccf_1", "Some Company Name Here");
+            final String encryptedPtaToken = Crypto.encrypt(uriBuilder.build().getQuery(), PTA_SECRET_KEY.getBytes(StandardCharsets.UTF_8));
+            final Map<String, String> result = new LinkedHashMap<>();
             result.put("data", encryptedPtaToken);
             return Response.ok(result).build();
         } catch (BadPaddingException e) {
@@ -59,9 +57,6 @@ public class ChatResource {
             log.error("Could not encrypt {}", e, e.getMessage());
             return Response.serverError().entity(errorResult(e.getMessage())).build();
         } catch (NoSuchPaddingException e) {
-            log.error("Could not encrypt {}", e, e.getMessage());
-            return Response.serverError().entity(errorResult(e.getMessage())).build();
-        } catch (UnsupportedEncodingException e) {
             log.error("Could not encrypt {}", e, e.getMessage());
             return Response.serverError().entity(errorResult(e.getMessage())).build();
         }
